@@ -3,3 +3,11 @@ repositories:
     type: git
     url: https://github.com/kyo0221/rsf_3d_localization.git
     version: jazzy
+  rsf/rsf_waypoint_manager:
+    type: git
+    url: https://github.com/kyo0221/rsf_waypoint_manager.git
+    version: jazzy
+  private/camera_based_rl_navigation:
+    type: git
+    url: https://github.com/kyo0221/camera_based_rl_navigation.git
+    version: main
