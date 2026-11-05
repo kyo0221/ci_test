@@ -7,6 +7,11 @@ on:
     paths:
       - rsf.repos
 
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
 # cspell: ignore deepdiff
 jobs:
   make-sure-label-is-present:
@@ -28,13 +33,22 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4.4.0
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ap-northeast-1
+          role-duration-seconds: 900
+
       - name: Generate token
         id: generate-token
-        uses: actions/create-github-app-token@v1.12.0
+        uses: konippi/create-github-app-token-aws-kms@cb04ce01dfb7fba68efbbc5d0b680d80125bdc79 # v1.0.3
         with:
-          app_id: ${{ secrets.APP_ID }}
-          private_key: ${{ secrets.PRIVATE_KEY }}
+          app-id: ${{ vars.APP_ID }}
+          kms-key-id: ${{ vars.KMS_KEY_ID }}
           owner: ${{ github.repository_owner }}
+          repositories: camera_based_rl_navigation
+          permission-contents: read
 
       - name: Set git config
         uses: autowarefoundation/autoware-github-actions/set-git-config@v1.69.1
@@ -57,7 +71,7 @@ jobs:
       - name: Run Publish Result to the Pull Request
         uses: actions/github-script@v6.4.1
         with:
-          github-token: ${{ steps.generate-token.outputs.token }}
+          github-token: ${{ github.token }}
           script: |
             const fs = require('fs');
             const result = fs.readFileSync('yaml_diff_report.md', 'utf8');  // Read the report file content
