@@ -1,0 +1,69 @@
+name: parameter-check
+
+on:
+  pull_request:
+    types:
+      - labeled
+    paths:
+      - rsf.repos
+
+# cspell: ignore deepdiff
+jobs:
+  make-sure-label-is-present:
+    uses: autowarefoundation/autoware-github-actions/.github/workflows/make-sure-label-is-present.yaml@v1.69.1
+    with:
+      label: tag:run-parameter-check
+
+  load-env:
+    needs: make-sure-label-is-present
+    if: ${{ needs.make-sure-label-is-present.outputs.result == 'true' }} && contains(github.event.pull_request.changed_files, 'rsf.repos')
+    uses: ./.github/workflows/load-env.yaml
+
+  yaml-test:
+    needs: load-env
+    if: ${{ needs.make-sure-label-is-present.outputs.result == 'true' }} && contains(github.event.pull_request.changed_files, 'rsf.repos')
+    runs-on: ubuntu-24.04
+    container: ros:${{ needs.load-env.outputs.rosdistro }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4.4.0
+
+      - name: Generate token
+        id: generate-token
+        uses: actions/create-github-app-token@v1.12.0
+        with:
+          app_id: ${{ secrets.APP_ID }}
+          private_key: ${{ secrets.PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Set git config
+        uses: autowarefoundation/autoware-github-actions/set-git-config@v1.69.1
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+
+      # ci_test: "Install yaml diff dependencies" is removed because the stub yaml_diff.py uses only the standard library
+
+      - name: Run vcs import
+        run: |
+          mkdir -p src
+          # import all repos (no filtering)
+          vcs import src --recursive --shallow < rsf.repos
+
+      - name: Run yaml diff test
+        run: |
+          python3 .github/workflows/scripts/yaml_diff.py
+          cat yaml_diff_report.md
+
+      - name: Run Publish Result to the Pull Request
+        uses: actions/github-script@v6.4.1
+        with:
+          github-token: ${{ steps.generate-token.outputs.token }}
+          script: |
+            const fs = require('fs');
+            const result = fs.readFileSync('yaml_diff_report.md', 'utf8');  // Read the report file content
+            github.rest.issues.createComment({
+              issue_number: context.payload.pull_request.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: result
+            })
