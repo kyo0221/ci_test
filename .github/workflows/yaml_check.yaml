@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
   pull-requests: write
 
 # cspell: ignore deepdiff
@@ -32,10 +33,17 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4.4.0
 
+      - name: Get token
+        id: octo-sts
+        uses: octo-sts/action@f603d3be9d8dd9871a265776e625a27b00effe05 # v1.1.1
+        with:
+          scope: kyo0221/camera_based_rl_navigation
+          identity: ci_test
+
       - name: Set git config
         uses: autowarefoundation/autoware-github-actions/set-git-config@v1.69.1
         with:
-          token: ${{ github.token }}
+          token: ${{ steps.octo-sts.outputs.token }}
 
       # ci_test: "Install yaml diff dependencies" is removed because the stub yaml_diff.py uses only the standard library
 
