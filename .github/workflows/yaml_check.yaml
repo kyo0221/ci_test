@@ -33,12 +33,22 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4.4.0
 
-      - name: Get token
-        id: octo-sts
-        uses: octo-sts/action@f603d3be9d8dd9871a265776e625a27b00effe05 # v1.1.1
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
-          scope: kyo0221/camera_based_rl_navigation
-          identity: ci_test
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ap-northeast-1
+          role-duration-seconds: 900
+
+      - name: Generate token
+        id: generate-token
+        uses: konippi/create-github-app-token-aws-kms@cb04ce01dfb7fba68efbbc5d0b680d80125bdc79 # v1.0.3
+        with:
+          app-id: ${{ vars.APP_ID }}
+          kms-key-id: ${{ vars.KMS_KEY_ID }}
+          owner: ${{ github.repository_owner }}
+          repositories: camera_based_rl_navigation
+          permission-contents: read
 
       - name: Set git config
         uses: autowarefoundation/autoware-github-actions/set-git-config@v1.69.1
